@@ -9,7 +9,8 @@
         { "name": "Christian S.", "email": "login.naitsirch@arcor.de" }
     ],
     "require": {
-        "php": ">=5.3.8"
+        "php": ">=5.3.8",
+        "tecnick.com/tcpdf": "dev-master"
     },
     "autoload": {
         "psr-0" : { "Tcpdf\\Extension\\" : "src/" }
