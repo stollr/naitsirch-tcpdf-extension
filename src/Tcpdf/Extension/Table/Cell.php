@@ -24,6 +24,7 @@ class Cell
     private $lineNumber;
     private $fontSize;
     private $fontWeight;
+    private $padding;
 
     public function __construct(Row $row, $text = '')
     {
@@ -34,6 +35,7 @@ class Cell
             ? self::FONT_WEIGHT_BOLD
             : self::FONT_WEIGHT_NORMAL
         );
+        $this->setPadding($row->getTable()->getPdf()->getCellPaddings());
     }
 
     /**
@@ -238,8 +240,71 @@ class Cell
      */
     public function getPadding()
     {
-        $paddings = $this->getTableRow()->getTable()->getPdf()->getCellPaddings();
-        return $paddings;
+        return $this->padding;
+    }
+    
+    /**
+     * Set the padding of the cell. Defining the paddings is analogue to the
+     * definition in CSS.
+     * 
+     * Set all paddings by array
+     * @example $pdf->setPadding(array('T' => 2, 'R' => 3, 'B' => 2, 'L' => 3));
+     * 
+     * Set all paddings by parameters
+     * @example $pdf->setPadding(2, 3, 2, 3);
+     * 
+     * Passing one parameter, assigns the value to all paddings
+     * @example $pdf->setPadding(2);
+     * 
+     * Passing two parameters, assigns the first one to the top and bottom padding
+     * and the second parameter to the right and left padding.
+     * @example $pdf->setPadding(2, 3);
+     * 
+     * @param float|array $top
+     * @param float $right
+     * @param float $bottom
+     * @param float $left
+     * @return Cell
+     */
+    public function setPadding($top = null, $right = null, $bottom = null, $left = null)
+    {
+        $padding = array();
+        
+        if (is_array($top)) {
+            $padding = $top;
+        } else {
+            if (null !== $top) {
+                $padding['T'] = $top;
+            }
+            if (null !== $right) {
+                $padding['R'] = $right;
+            }
+            if (null !== $bottom) {
+                $padding['B'] = $bottom;
+            }
+            if (null !== $left) {
+                $padding['L'] = $left;
+            }
+        }
+        
+        if (isset($padding['T']) && !isset($padding['R']) && !isset($padding['B']) && !isset($padding['L'])) {
+            $padding['R'] = $padding['B'] = $padding['L'] = $padding['T'];
+        } else if (isset($padding['T']) && isset($padding['R']) && !isset($padding['B']) && !isset($padding['L'])) {
+            $padding['B'] = $padding['T'];
+            $padding['L'] = $padding['R'];
+        }
+        
+        $this->padding = array_replace(array(
+                'T' => 1,
+                'R' => 1,
+                'B' => 1,
+                'L' => 1,
+            ),
+            $this->padding,
+            $padding
+        );
+        
+        return $this;
     }
 
     /**
