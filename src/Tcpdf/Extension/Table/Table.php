@@ -12,12 +12,14 @@ class Table
     private $pdf;
     private $rows;
     private $lineHeight;
+    private $fontSize;
     private $width;
     private $widthPercentage;
 
     public function __construct(\TCPDF $pdf)
     {
         $this->pdf = $pdf;
+        $this->setFontSize($pdf->getFontSizePt());
     }
 
 
@@ -81,12 +83,28 @@ class Table
 
     public function setWidth($width, $percentage = false)
     {
+        if (!is_numeric($width)) {
+            throw new \InvalidArgumentException('The width must be numeric.');
+        }
         $this->width = $width;
         $this->widthPercentage = (bool) $percentage;
         return $this;
     }
 
+    public function getFontSize()
+    {
+        return $this->fontSize;
+    }
 
+    public function setFontSize($fontSize)
+    {
+        if (!is_numeric($fontSize)) {
+            throw new \InvalidArgumentException('The font size must be numeric.');
+        }
+        $this->fontSize = $fontSize;
+        return $this;
+    }
+    
     /**
      * Draws the table and returns the PDF generator.
      * @return \TCPDF

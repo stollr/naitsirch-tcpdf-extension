@@ -29,7 +29,7 @@ class Cell
     {
         $this->row = $row;
         $this->setText($text);
-        $this->setFontSize($row->getTable()->getPdf()->getFontSizePt());
+        $this->setFontSize($row->getTable()->getFontSize());
         $this->setFontWeight(strpos($row->getTable()->getPdf()->getFontStyle(), 'B') !== false
             ? self::FONT_WEIGHT_BOLD
             : self::FONT_WEIGHT_NORMAL
