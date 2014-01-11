@@ -1,7 +1,7 @@
 {
     "name": "naitsirch/tcpdf-extension",
     "type": "library",
-    "description": "This repository contains a library which extends the TCPDF library for example with smart tables in an OOP style.",
+    "description": "This library extends the TCPDF library for example with a smart API for creating tables.",
     "keywords": ["php", "pdf", "tcpdf", "generator"],
     "homepage": "https://github.com/naitsirch/tcpdf-extension",
     "license": "MIT",
@@ -14,10 +14,5 @@
     },
     "autoload": {
         "psr-0" : { "Tcpdf\\Extension\\" : "src/" }
-    },
-    "extra": {
-        "branch-alias": {
-            "dev-master": "master-dev"
-        }
     }
 }
