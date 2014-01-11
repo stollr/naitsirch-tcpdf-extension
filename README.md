@@ -88,7 +88,7 @@ table cells in different ways:
 ```php
 $table
     ->newRow()
-        ->newCell('Last Name)          // you can set the cell content like this
+        ->newCell('Last Name')         // you can set the cell content like this
             ->setText('Override Text') // or like this
             ->setFontWeight('bold')    // set font weight 'bold' or 'normal'
             ->setAlign('L')            // text alignment ('L', 'C', 'R' or 'J')
