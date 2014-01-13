@@ -155,6 +155,9 @@ class TableConverter
                     $cell->getPadding(),  // cellpadding, if null, use default
                     $cell->getBorder()
                 );
+                if ($cell->getMinHeight() > $height) {
+                    $height = $cell->getMinHeight();
+                }
                 if ($height > $rowHeight) {
                     $rowHeight = $height;
                 }
