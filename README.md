@@ -95,6 +95,8 @@ $table
             ->setBorder(1)             // border format (like in TCPDF::MultiCell)
             ->setColspan(2)            // colspan like in HTML
             ->setFontSize(10)          // unit for font size is same as defined in TCPDF
+            ->setMinHeight(10)         // defining min-height of the cell like in CSS
+            ->setPadding(2, 4)         // setting cell padding (inner margin) like in CSS
             ->setWidth(125)            // unit for width is same as defined in TCPDF
         ->end()
 ```
