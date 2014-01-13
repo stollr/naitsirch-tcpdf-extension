@@ -152,7 +152,7 @@ class TableConverter
                     $cell->getText(),
                     false, // reset
                     true,  // $autopadding
-                    null,  // cellpadding, if null, use default
+                    $cell->getPadding(),  // cellpadding, if null, use default
                     $cell->getBorder()
                 );
                 if ($height > $rowHeight) {
@@ -176,6 +176,7 @@ class TableConverter
             'size'    => $this->getPdf()->getFontSize(),
             'size_pt' => $this->getPdf()->getFontSizePt(),
             'cell_height_ratio' => $this->getPdf()->getCellHeightRatio(),
+            'cell_padding' => $this->getPdf()->getCellPaddings(),
         );
         return $this;
     }
@@ -191,6 +192,13 @@ class TableConverter
             $this->fontSettings['size_pt']
         );
         $this->getPdf()->setCellHeightRatio($this->fontSettings['cell_height_ratio']);
+        $this->getPdf()->setCellPaddings(
+            $this->fontSettings['cell_padding']['L'],
+            $this->fontSettings['cell_padding']['T'],
+            $this->fontSettings['cell_padding']['R'],
+            $this->fontSettings['cell_padding']['B']
+        );
+
 
         return $this;
     }
@@ -238,6 +246,8 @@ class TableConverter
                     $cell->getFontWeight() == Cell::FONT_WEIGHT_BOLD ? 'B' : '',
                     $cell->getFontSize()
                 );
+                $padding = $cell->getPadding();
+                $this->getPdf()->setCellPaddings($padding['L'], $padding['T'], $padding['R'], $padding['B']);
 
                 // write cell to pdf
                 $this->getPdf()->MultiCell($width, $rowHeights[$r], $cell->getText(), $cell->getBorder(), $cell->getAlign(), $cell->getFill());

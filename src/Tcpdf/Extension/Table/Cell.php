@@ -24,7 +24,7 @@ class Cell
     private $lineNumber;
     private $fontSize;
     private $fontWeight;
-    private $padding;
+    private $padding = array();
 
     public function __construct(Row $row, $text = '')
     {
