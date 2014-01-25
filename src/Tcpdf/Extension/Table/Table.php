@@ -26,7 +26,7 @@ class Table
     public function getLineHeight()
     {
         if (!$this->lineHeight) {
-            return $this->getPdf()->getFontSize();
+            return $this->getFontSize();
         }
         return $this->lineHeight;
     }
