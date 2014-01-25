@@ -248,7 +248,11 @@ class TableConverter
                 );
                 $padding = $cell->getPadding();
                 $pdf->setCellPaddings($padding['L'], $padding['T'], $padding['R'], $padding['B']);
-                // set the line height
+
+                // set the line height here by myself
+                // because TCPDF resets line height (cell padding of lines) 
+                // before checking for current line height, so that it calculates the wrong
+                // line height in MultiCell
                 $pdf->setLastH($pdf->getCellHeight($pdf->getFontSize(), true));
 
                 // write cell to pdf
