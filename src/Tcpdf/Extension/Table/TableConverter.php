@@ -155,6 +155,12 @@ class TableConverter
                     $cell->getPadding(),  // cellpadding, if null, use default
                     $cell->getBorder()
                 );
+
+                // Workaround: getStringHeight of TCPDF sums up all lines with their line height,
+                // but MultiCell adds the top and bottom padding to the whole cell, again
+                $padding = $cell->getPadding();
+                $height += $padding['T'] + $padding['B'];
+
                 if ($cell->getMinHeight() > $height) {
                     $height = $cell->getMinHeight();
                 }
