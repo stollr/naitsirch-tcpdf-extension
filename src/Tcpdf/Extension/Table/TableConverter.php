@@ -224,42 +224,55 @@ class TableConverter
 
     private function convert()
     {
+        $pdf = $this->getPdf();
         $cellWidths = $this->_getCellWidths();
         $rowHeights = $this->_getRowHeights();
 
         // after all sizes are collected, we can start printing the cells
-        $x = $this->getPdf()->GetX();
+        $x = $pdf->GetX();
         $r = 0;
         foreach ($this->getTable()->getRows() as $row) {
             $c = 0;
-            $y2 = $this->getPdf()->GetY();
+            $y2 = $pdf->GetY();
             $x2 = $x;
             foreach ($row->getCells() as $cell) {
                 // calculate the width (regard colspan)
                 $width = $cellWidths[$r][$c];
 
-                // set correct X/Y position for this cell
-                $this->getPdf()->SetXY($x2, $y2);
-                $x2 = $x2 + $width;
-
                 // save styles and set needed
                 $this->_saveFontSettings();
-                $this->getPdf()->SetFont(
-                    $this->getPdf()->getFontFamily(),
+                $pdf->SetFont(
+                    $pdf->getFontFamily(),
                     $cell->getFontWeight() == Cell::FONT_WEIGHT_BOLD ? 'B' : '',
                     $cell->getFontSize()
                 );
                 $padding = $cell->getPadding();
-                $this->getPdf()->setCellPaddings($padding['L'], $padding['T'], $padding['R'], $padding['B']);
+                $pdf->setCellPaddings($padding['L'], $padding['T'], $padding['R'], $padding['B']);
+                // set the line height
+                $pdf->setLastH($pdf->getCellHeight($pdf->getFontSize(), true));
 
                 // write cell to pdf
-                $this->getPdf()->MultiCell($width, $rowHeights[$r], $cell->getText(), $cell->getBorder(), $cell->getAlign(), $cell->getFill());
+                $pdf->MultiCell(
+                    $width,
+                    $rowHeights[$r],
+                    $cell->getText(),
+                    $cell->getBorder(),
+                    $cell->getAlign(),
+                    $cell->getFill(),
+                    1,                  // current position should go to the beginning of the next line
+                    $x2,
+                    $y2,
+                    false               // line height should NOT be resetted
+                );
+
+                // increase X position for next cell
+                $x2 = $x2 + $width;
 
                 $this->_restoreFontSettings();
 
                 $c++;
             }
-            $this->getPdf()->SetX($x);
+            $pdf->SetX($x);
             $r++;
         }
     }
