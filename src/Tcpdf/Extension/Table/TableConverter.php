@@ -143,22 +143,33 @@ class TableConverter
             foreach ($row->getCells() as $cell) {
                 // set the font size, so that the height can be determined correctly
                 $pdf->SetFont(
-                    $pdf->getFontFamily(),
-                    $cell->getFontWeight() == Cell::FONT_WEIGHT_BOLD ? 'B' : '',
+                    $cell->getFontFamily(),
+                    $cell->getFontWeight() == Table::FONT_WEIGHT_BOLD ? 'B' : '',
                     $cell->getFontSize()
                 );
+                $padding = $cell->getPadding();
+                $pdf->setCellPaddings($padding['L'], $padding['T'], $padding['R'], $padding['B']);
+
+                // set the line height here by myself
+                // because TCPDF resets line height (cell padding of lines)
+                // before checking for current line height, so that it calculates the wrong
+                // line height in MultiCell
+                $pdf->setLastH($pdf->getCellHeight(
+                    ($cell->getLineHeight() ?: $cell->getFontSize()) / $pdf->getScaleFactor(),
+                    false
+                ));
+                
                 $height = $pdf->getStringHeight(
                     $cellWidths[$r][$c],
                     $cell->getText(),
                     false, // reset
-                    true,  // $autopadding
-                    $cell->getPadding(),  // cellpadding, if null, use default
+                    false,  // $autopadding
+                    $padding,  // cellpadding, if null, use default
                     $cell->getBorder()
                 );
 
                 // Workaround: getStringHeight of TCPDF sums up all lines with their line height,
                 // but MultiCell adds the top and bottom padding to the whole cell, again
-                $padding = $cell->getPadding();
                 $height += $padding['T'] + $padding['B'];
 
                 if ($cell->getMinHeight() > $height) {
@@ -230,6 +241,9 @@ class TableConverter
 
     private function convert()
     {
+        // save current styles
+        $this->_saveFontSettings();
+
         $pdf = $this->getPdf();
         $cellWidths = $this->_getCellWidths();
         $rowHeights = $this->_getRowHeights();
@@ -245,11 +259,9 @@ class TableConverter
                 // calculate the width (regard colspan)
                 $width = $cellWidths[$r][$c];
 
-                // save styles and set needed
-                $this->_saveFontSettings();
                 $pdf->SetFont(
-                    $pdf->getFontFamily(),
-                    $cell->getFontWeight() == Cell::FONT_WEIGHT_BOLD ? 'B' : '',
+                    $cell->getFontFamily(),
+                    $cell->getFontWeight() == Table::FONT_WEIGHT_BOLD ? 'B' : '',
                     $cell->getFontSize()
                 );
                 $padding = $cell->getPadding();
@@ -259,7 +271,10 @@ class TableConverter
                 // because TCPDF resets line height (cell padding of lines) 
                 // before checking for current line height, so that it calculates the wrong
                 // line height in MultiCell
-                $pdf->setLastH($pdf->getCellHeight($pdf->getFontSize(), true));
+                $pdf->setLastH($pdf->getCellHeight(
+                    ($cell->getLineHeight() ?: $cell->getFontSize()) / $pdf->getScaleFactor(),
+                    false
+                ));
 
                 // write cell to pdf
                 $pdf->MultiCell(
@@ -278,12 +293,12 @@ class TableConverter
                 // increase X position for next cell
                 $x2 = $x2 + $width;
 
-                $this->_restoreFontSettings();
-
                 $c++;
             }
             $pdf->SetX($x);
             $r++;
         }
+
+        $this->_restoreFontSettings();
     }
 }

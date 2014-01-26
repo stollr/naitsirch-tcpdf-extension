@@ -9,9 +9,6 @@ namespace Tcpdf\Extension\Table;
  */
 class Cell
 {
-    const FONT_WEIGHT_NORMAL = 'normal';
-    const FONT_WEIGHT_BOLD = 'bold';
-
     private $row;
     private $text;
     private $colspan = 1;
@@ -21,7 +18,7 @@ class Cell
     private $border = 0;
     private $align = 'L';
     private $fill = 0;
-    private $lineNumber;
+    private $fontFamily;
     private $fontSize;
     private $fontWeight;
     private $padding = array();
@@ -30,11 +27,11 @@ class Cell
     {
         $this->row = $row;
         $this->setText($text);
+        $this->setBorderWidth($row->getTable()->getBorderWidth());
+        $this->setFontFamily($row->getTable()->getFontFamily());
         $this->setFontSize($row->getTable()->getFontSize());
-        $this->setFontWeight(strpos($row->getTable()->getPdf()->getFontStyle(), 'B') !== false
-            ? self::FONT_WEIGHT_BOLD
-            : self::FONT_WEIGHT_NORMAL
-        );
+        $this->setFontWeight($row->getTable()->getFontWeight());
+        $this->setLineHeight($row->getTable()->getLineHeight());
         $this->setPadding($row->getTable()->getPdf()->getCellPaddings());
     }
 
@@ -68,10 +65,7 @@ class Cell
 
     public function setWidth($width)
     {
-        if ($this->width != $width) {
-            $this->width = $width;
-            $this->lineNumber = null; // line number has to be reseted and recalculated
-        }
+        $this->width = $width;
         return $this;
     }
 
@@ -86,14 +80,21 @@ class Cell
         return $this;
     }
 
+    /**
+     * Get the height of one line. The value is given in user units.
+     * @return float
+     */
     public function getLineHeight()
     {
-        if (!$this->lineHeight) {
-            return $this->getTableRow()->getTable()->getLineHeight();
-        }
         return $this->lineHeight;
     }
 
+    /**
+     * Set the height of one line. The value must be in user units.
+     *
+     * @param float $lineHeight in user units
+     * @return \Tcpdf\Extension\Table\Cell
+     */
     public function setLineHeight($lineHeight)
     {
         $this->lineHeight = $lineHeight;
@@ -141,6 +142,17 @@ class Cell
         return $this;
     }
 
+    public function getBorderWidth()
+    {
+        return $this->borderWidth;
+    }
+
+    public function setBorderWidth($borderWidth)
+    {
+        $this->borderWidth = $borderWidth;
+        return $this;
+    }
+
     public function getAlign()
     {
         return $this->align;
@@ -183,6 +195,17 @@ class Cell
         return $this;
     }
 
+    public function getFontFamily()
+    {
+        return $this->fontFamily;
+    }
+
+    public function setFontFamily($fontFamily)
+    {
+        $this->fontFamily = $fontFamily;
+        return $this;
+    }
+
     public function getFontWeight()
     {
         return $this->fontWeight;
@@ -192,15 +215,15 @@ class Cell
      * Set font weight like in CSS.
      *
      * @param string $fontWeight <p>Possible values:</p><ul>
-     *   <li><i>normal</i>: Cell::FONT_WEIGHT_NORMAL</li>
-     *   <li><i>bold</i>: Cell::FONT_WEIGHT_BOLD</li>
+     *   <li><i>normal</i>: Table::FONT_WEIGHT_NORMAL</li>
+     *   <li><i>bold</i>: Table::FONT_WEIGHT_BOLD</li>
      * </ul>
      * @return Cell
      * @throws InvalidArgumentException
      */
     public function setFontWeight($fontWeight)
     {
-        if (!in_array($fontWeight, array(self::FONT_WEIGHT_NORMAL, self::FONT_WEIGHT_BOLD))) {
+        if (!in_array($fontWeight, array(Table::FONT_WEIGHT_NORMAL, Table::FONT_WEIGHT_BOLD))) {
             throw new InvalidArgumentException("The font weight '$fontWeight' is not supported.");
         }
         $this->fontWeight = $fontWeight;
@@ -313,9 +336,6 @@ class Cell
      */
     public function end()
     {
-        if (!$this->getLineHeight()) {
-            throw new \RuntimeException('Every table cell needs a specified line height.');
-        }
         return $this->getTableRow();
     }
 }
