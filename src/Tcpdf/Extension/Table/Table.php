@@ -15,7 +15,7 @@ class Table
     private $pdf;
     private $rows;
     private $borderWidth;
-    private $lineHeight;
+    private $lineHeight = 1;
     private $fontFamily;
     private $fontSize;
     private $fontWeight;
@@ -46,7 +46,9 @@ class Table
     }
 
     /**
-     * Get the height of one line. The value is given in user units.
+     * Get the factor for the height of one line.
+     * If the factor is 1.5 you will get a line height which is one and a half times largeer than the font size.
+     *
      * @return float
      */
     public function getLineHeight()
@@ -55,7 +57,8 @@ class Table
     }
 
     /**
-     * Set the height of one line. The value must be in user units.
+     * Set the factor for the height of one line.
+     * If the factor is 1.5 you will get a line height which is one and a half times largeer than the font size.
      *
      * @param float $lineHeight in user units
      * @return \Tcpdf\Extension\Table\Table

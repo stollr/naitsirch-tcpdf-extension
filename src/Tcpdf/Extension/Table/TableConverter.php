@@ -147,29 +147,22 @@ class TableConverter
                     $cell->getFontWeight() == Table::FONT_WEIGHT_BOLD ? 'B' : '',
                     $cell->getFontSize()
                 );
-                $padding = $cell->getPadding();
-                $pdf->setCellPaddings($padding['L'], $padding['T'], $padding['R'], $padding['B']);
 
-                // set the line height here by myself
-                // because TCPDF resets line height (cell padding of lines)
-                // before checking for current line height, so that it calculates the wrong
-                // line height in MultiCell
-                $pdf->setLastH($pdf->getCellHeight(
-                    ($cell->getLineHeight() ?: $cell->getFontSize()) / $pdf->getScaleFactor(),
-                    false
-                ));
-                
-                $height = $pdf->getStringHeight(
-                    $cellWidths[$r][$c],
+                // get the line height here by myself, otherwise it's not possible
+                // to use our own line height
+                $padding = $cell->getPadding();
+                $lines = $pdf->getNumLines(
                     $cell->getText(),
-                    false, // reset
-                    false,  // $autopadding
-                    $padding,  // cellpadding, if null, use default
+                    $cellWidths[$r][$c],
+                    false,
+                    false,
+                    array('T' => 0, 'R' => $padding['R'], 'B' => 0, 'L' => $padding['L']),
                     $cell->getBorder()
                 );
+                $height = $lines * $cell->getLineHeight() * ($cell->getFontSize() / $pdf->getScaleFactor()) * $pdf->getCellHeightRatio();
 
-                // Workaround: getStringHeight of TCPDF sums up all lines with their line height,
-                // but MultiCell adds the top and bottom padding to the whole cell, again
+                // After we have summed up the height of all lines, we have to add
+                // top and border padding of the cell to the height
                 $height += $padding['T'] + $padding['B'];
 
                 if ($cell->getMinHeight() > $height) {
@@ -272,7 +265,7 @@ class TableConverter
                 // before checking for current line height, so that it calculates the wrong
                 // line height in MultiCell
                 $pdf->setLastH($pdf->getCellHeight(
-                    ($cell->getLineHeight() ?: $cell->getFontSize()) / $pdf->getScaleFactor(),
+                    $cell->getLineHeight() * ($cell->getFontSize() / $pdf->getScaleFactor()),
                     false
                 ));
 

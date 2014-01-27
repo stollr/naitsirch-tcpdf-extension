@@ -81,7 +81,8 @@ class Cell
     }
 
     /**
-     * Get the height of one line. The value is given in user units.
+     * Get the factor for the height of one line.
+     * If the factor is 1.5 you will get a line height which is one and a half times largeer than the font size.
      * @return float
      */
     public function getLineHeight()
@@ -90,7 +91,8 @@ class Cell
     }
 
     /**
-     * Set the height of one line. The value must be in user units.
+     * Set the factor for the height of one line.
+     * If the factor is 1.5 you will get a line height which is one and a half times largeer than the font size.
      *
      * @param float $lineHeight in user units
      * @return \Tcpdf\Extension\Table\Cell
