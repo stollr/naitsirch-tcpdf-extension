@@ -2,6 +2,9 @@
 
 namespace Tcpdf\Extension\Table;
 
+use Tcpdf\Extension\Helper;
+use Tcpdf\Extension\Attribute\BackgroundFormatterOptions;
+
 /**
  * Tcpdf\Extension\Table\TableConverter
  *
@@ -9,15 +12,116 @@ namespace Tcpdf\Extension\Table;
  */
 class TableConverter
 {
+    private $cacheDir;
     private $table;
     private $fontSettings;
     private $rowHeights;
     private $cellWidths;
 
-    public function __construct(Table $table)
+    /**
+     * Converts a table and puts it on the PDF.
+     *
+     * @param \Tcpdf\Extension\Table\Table $table
+     * @param string $cacheDir If the cache directory is given, resized images could be cached.
+     */
+    public function __construct(Table $table, $cacheDir = null)
     {
         $this->table = $table;
+        $this->cacheDir = $cacheDir;
         $this->convert();
+    }
+
+    private function _addCellBackgroundImage(Cell $cell, $x = 0, $y = 0, $width = 0, $height = 0)
+    {
+        $backgroundImage = $cell->getBackgroundImage();
+        $formatter = $cell->getBackground()->getFormatter();
+        if (!$backgroundImage && !$formatter) {
+            return;
+        }
+
+        // execute background formatter
+        $dpi = $cell->getBackground()->getDpi() ?: 72;
+        if ($formatter = $cell->getBackground()->getFormatter()) {
+            $options = new BackgroundFormatterOptions($backgroundImage, $width, $height);
+            $formatter($options);
+            $backgroundImage = $options->getImage();
+            $width = $options->getWidth();
+            $height = $options->getHeight();
+//            if ($options->getDpi()) {
+//                $dpi = $options->getDpi();
+//            }
+        }
+
+        if (!$backgroundImage) {
+            return;
+        }
+
+        if (strlen($backgroundImage) > 1024 || !file_exists($backgroundImage)) {
+            $imageInfo = getimagesizefromstring($backgroundImage);
+            $imageOriginal = imagecreatefromstring($backgroundImage);
+        } else {
+            $imageInfo = getimagesize($backgroundImage);
+            switch ($imageInfo[2]) {
+                case IMAGETYPE_GIF:
+                    $imageOriginal = imagecreatefromgif($backgroundImage);
+                    break;
+                case IMAGETYPE_JPEG:
+                    $imageOriginal = imagecreatefromjpeg($backgroundImage);
+                    break;
+                case IMAGETYPE_PNG:
+                    $imageOriginal = imagecreatefrompng($backgroundImage);
+                    break;
+            }
+        }
+
+        // interpret border settings
+        $border = $cell->getBorder();
+        if ($border === 1 || $border === '1') {
+            $border = 'TRBL';
+        }
+        if (false !== strpos($border, 'T')) {
+            $y = $y + ($cell->getBorderWidth() / 2);
+            $height = $height - ($cell->getBorderWidth() / 2);
+        }
+        if (false !== strpos($border, 'R')) {
+            $width = $width - ($cell->getBorderWidth() / 2);
+        }
+        if (false !== strpos($border, 'B')) {
+            $height = $height - ($cell->getBorderWidth() / 2);
+        }
+        if (false !== strpos($border, 'L')) {
+            $x = $x + ($cell->getBorderWidth() / 2);
+            $width = $width - ($cell->getBorderWidth() / 2);
+        }
+
+        // terrible workaround to get the
+        $pdf = $cell->getTableRow()->getTable()->getPdf();
+        $prop = new \ReflectionProperty('\\TCPDF', 'pdfunit');
+        $prop->setAccessible(true);
+        $unit = $prop->getValue($pdf);
+
+        $widthPixel = Helper::getSizeInPixel($width, $unit, $dpi);
+        $heightPixel = Helper::getSizeInPixel($height, $unit, $dpi);
+        $imageBackground = imagecreatetruecolor($widthPixel, $heightPixel);
+        imagecopy($imageBackground, $imageOriginal, 0, 0, 0, 0, $widthPixel, $heightPixel);
+        ob_start();
+        imagejpeg($imageBackground);
+        $image = ob_get_clean();
+        imagedestroy($imageOriginal);
+        imagedestroy($imageBackground);
+
+        $this->getPdf()->Image(
+            '@' . $image,
+            $x,
+            $y,
+            $width,
+            $height,
+            null, // image type, null == auto
+            null,
+            'N',
+            false,
+            $dpi
+        );
     }
 
     private function _getRawCellWidths()
@@ -251,6 +355,9 @@ class TableConverter
             foreach ($row->getCells() as $cell) {
                 // calculate the width (regard colspan)
                 $width = $cellWidths[$r][$c];
+
+                // background image
+                $this->_addCellBackgroundImage($cell, $x2, $y2, $width, $rowHeights[$r]);
 
                 $pdf->SetFont(
                     $cell->getFontFamily(),

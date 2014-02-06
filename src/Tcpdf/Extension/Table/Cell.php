@@ -2,6 +2,8 @@
 
 namespace Tcpdf\Extension\Table;
 
+use Tcpdf\Extension\Attribute\BackgroundAttribute;
+
 /**
  * Tcpdf\Extension\Table\Cell
  *
@@ -15,6 +17,7 @@ class Cell
     private $width;
     private $minHeight;
     private $lineHeight;
+    private $background;
     private $border = 0;
     private $align = 'L';
     private $fill = 0;
@@ -42,6 +45,88 @@ class Cell
     public function getTableRow()
     {
         return $this->row;
+    }
+
+    /**
+     * @return BackgroundAttribute
+     */
+    public function getBackground()
+    {
+        if (!$this->background) {
+            $this->background = new BackgroundAttribute($this);
+        }
+        return $this->background;
+    }
+
+    public function getBackgroundColor()
+    {
+        return $this->getBackground()->getColor();
+    }
+
+    /**
+     * Set the background color.
+     *
+     * $cell->setBackgroundColor('#ffffff'); // hexadecimal CSS notation
+     * $cell->setBackgroundColor(array(255, 255, 255));
+     * $cell->setBackgroundColor(null); // this means transparent
+     *
+     * @param string|array|null $backgroundColor
+     * @return \Tcpdf\Extension\Table\Cell
+     */
+    public function setBackgroundColor($backgroundColor)
+    {
+        $this->getBackground()->setColor($backgroundColor);
+        return $this;
+    }
+
+    public function getBackgroundDpi()
+    {
+        return $this->getBackground()->getDpi();
+    }
+
+    public function setBackgroundDpi($dpi)
+    {
+        $this->getBackground()->setDpi($dpi);
+        return $this;
+    }
+
+    /**
+     * Get the background image.
+     *
+     * @return null|array <pre>null or array(
+     *      'image' => Absolute filename of the image, binary file content or \SplFileInfo object
+     *      'info' => array()
+     * )</pre>
+     */
+    public function getBackgroundImage()
+    {
+        return $this->getBackground()->getImage();
+    }
+
+    /**
+     * Set the background image.
+     *
+     * @param string|\SplFileInfo $backgroundImage Absolute filename of the image, binary file content or \SplFileInfo object
+     * @param array $info
+     * @return \Tcpdf\Extension\Table\Cell
+     */
+    public function setBackgroundImage($backgroundImage)
+    {
+        $this->getBackground()->setImage($backgroundImage);
+        return $this;
+    }
+
+    /**
+     * Set a formatter callable for the background. This allows you to
+     * modify options of the image on the run.
+     * 
+     * @param callable $formatter
+     * @return \Tcpdf\Extension\Table\Cell
+     */
+    public function setBackgroundFormatter(callable $formatter = null)
+    {
+        $this->getBackground()->setFormatter($formatter);
+        return $this;
     }
 
     public function setColspan($colspan = 1)

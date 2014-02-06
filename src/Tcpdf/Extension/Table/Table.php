@@ -13,6 +13,7 @@ class Table
     const FONT_WEIGHT_BOLD = 'bold';
 
     private $pdf;
+    private $cacheDir;
     private $rows;
     private $borderWidth;
     private $lineHeight = 1;
@@ -22,9 +23,16 @@ class Table
     private $width;
     private $widthPercentage;
 
-    public function __construct(\TCPDF $pdf)
+    /**
+     * Create a table structure for TCPDF.
+     *
+     * @param \TCPDF $pdf
+     * @param string $cacheDir If the cache directory is given, resized images could be cached.
+     */
+    public function __construct(\TCPDF $pdf, $cacheDir = null)
     {
         $this->pdf = $pdf;
+        $this->cacheDir = $cacheDir;
         $this->setBorderWidth($pdf->GetLineWidth());
         $this->setFontFamily($pdf->getFontFamily());
         $this->setFontSize($pdf->getFontSizePt()); // FontSizePT is in points (not in user unit)
@@ -169,7 +177,7 @@ class Table
      */
     public function end()
     {
-        new TableConverter($this);
+        new TableConverter($this, $this->cacheDir);
         return $this->getPdf();
     }
 }
