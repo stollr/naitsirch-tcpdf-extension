@@ -387,7 +387,13 @@ class TableConverter
                     1,                  // current position should go to the beginning of the next line
                     $x2,
                     $y2,
-                    false               // line height should NOT be resetted
+                    false,              // line height should NOT be resetted
+                    false,              // stretch
+                    false,              // is html
+                    true,               // autopadding
+                    0,                  // maxh
+                    'T',                // vertical alignment T, M or B
+                    $cell->getFitCell()
                 );
 
                 // increase X position for next cell

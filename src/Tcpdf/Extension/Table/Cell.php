@@ -20,6 +20,7 @@ class Cell
     private $background;
     private $border = 0;
     private $align = 'L';
+    private $fitCell = false;
     private $fill = 0;
     private $fontFamily;
     private $fontSize;
@@ -267,6 +268,26 @@ class Cell
     public function getFill()
     {
         return $this->fill;
+    }
+
+    /**
+     * Returns whether the text of the cell should be made fitting to the cell width.
+     * @return boolean
+     */
+    public function getFitCell()
+    {
+        return $this->fitCell;
+    }
+
+    /**
+     * Define whether the text of the cell should be made fitting to the cell width.
+     * @param boolean $fitCell
+     * @return \Tcpdf\Extension\Table\Cell
+     */
+    public function setFitCell($fitCell)
+    {
+        $this->fitCell = (boolean) $fitCell;
+        return $this;
     }
 
     /**
