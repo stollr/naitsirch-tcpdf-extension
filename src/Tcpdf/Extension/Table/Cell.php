@@ -14,6 +14,7 @@ class Cell
     private $row;
     private $text;
     private $colspan = 1;
+    private $rowspan = 1;
     private $width;
     private $minHeight;
     private $lineHeight;
@@ -142,6 +143,20 @@ class Cell
     public function getColspan()
     {
         return $this->colspan;
+    }
+
+    public function setRowspan($rowspan = 1)
+    {
+        if ($rowspan < 1) {
+            throw new \InvalidArgumentException('The rowspan must not be lower than "1".');
+        }
+        $this->rowspan = $rowspan;
+        return $this;
+    }
+
+    public function getRowspan()
+    {
+        return $this->rowspan;
     }
 
     public function getWidth()
