@@ -6,7 +6,7 @@
     "homepage": "https://github.com/naitsirch/tcpdf-extension",
     "license": "MIT",
     "authors": [
-        { "name": "Christian S.", "email": "login.naitsirch@arcor.de" }
+        { "name": "naitsirch", "email": "login.naitsirch@arcor.de" }
     ],
     "require": {
         "php": ">=5.3.8",
