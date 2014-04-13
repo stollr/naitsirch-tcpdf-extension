@@ -93,6 +93,7 @@ $table
             ->setFontWeight('bold')    // set font weight 'bold' or 'normal'
             ->setAlign('L')            // text alignment ('L', 'C', 'R' or 'J')
             ->setBorder(1)             // border format (like in TCPDF::MultiCell)
+            ->setRowspan(1)            // rowspan like in HTML
             ->setColspan(2)            // colspan like in HTML
             ->setFontSize(10)          // unit for font size is same as defined in TCPDF
             ->setMinHeight(10)         // defining min-height of the cell like in CSS

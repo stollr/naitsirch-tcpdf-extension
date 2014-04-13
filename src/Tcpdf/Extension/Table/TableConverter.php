@@ -17,6 +17,7 @@ class TableConverter
     private $fontSettings;
     private $rowHeights;
     private $cellWidths;
+    private $rowspanInfos;
 
     /**
      * Converts a table and puts it on the PDF.
@@ -127,17 +128,34 @@ class TableConverter
     private function _getRawCellWidths()
     {
         $cellWidths = array();
+        $rowspanInfos = array();
+        $r = 0;
         foreach ($this->getTable()->getRows() as $row) {
             $c = 0;
             foreach ($row->getCells() as $cell) {
+                // save rowspan info
+                if ($cell->getRowspan() > 1) {
+                    for ($rs = 0; $rs < $cell->getRowspan(); $rs++) {
+                        $rowspanInfos[$c][$r + $rs] = array('position' => $rs);
+                    }
+                }
+
+                // overjump rowspanned columns
+                while (isset($rowspanInfos[$c][$r]) && $rowspanInfos[$c][$r]['position'] > 0) {
+                    $c++;
+                }
+
+                // ignore cells taking more than one column
                 if ($cell->getColspan() == 1) {
                     $width = $cell->getWidth() ?: $this->getPdf()->GetStringWidth($cell->getText());
                     if (empty($cellWidths[$c]) || $width > $cellWidths[$c]) {
                         $cellWidths[$c] = $width;
                     }
                 }
+
                 $c += $cell->getColspan();
             }
+            $r++;
         }
         return $cellWidths;
     }
@@ -186,10 +204,24 @@ class TableConverter
         }
 
         // set new calculated widths to the cells
+        $rowspanInfos = array();
         $r = 0;
         foreach ($this->getTable()->getRows() as $row) {
             $c = $cr = 0; // $cr = real cell index
             foreach ($row->getCells() as $cell) {
+                // save rowspan info
+                if ($cell->getRowspan() > 1) {
+                    for ($rs = 0; $rs < $cell->getRowspan(); $rs++) {
+                        $rowspanInfos[$c][$r + $rs] = array('position' => $rs);
+                    }
+                }
+
+                // overjump rowspanned columns
+                while (isset($rowspanInfos[$c][$r]) && $rowspanInfos[$c][$r]['position'] > 0) {
+                    $c++;
+                }
+
+                // collect widths
                 $width = 0;
                 for ($i = 0; $i < $cell->getColspan(); $i++) {
                     $width += $cellWidths[$c];
@@ -240,10 +272,14 @@ class TableConverter
         
         $cellWidths = $this->_getCellWidths();
         $rowHeights = array();
+        $rowspanInfos = array();
         $r = 0;
         foreach ($this->getTable()->getRows() as $row) {
             $c = 0;
-            $rowHeight = 0;
+            if (!isset($rowHeights[$r])) {
+                // this is needed because of rowspan info
+                $rowHeights[$r] = 0;
+            }
             foreach ($row->getCells() as $cell) {
                 // set the font size, so that the height can be determined correctly
                 $pdf->SetFont(
@@ -272,17 +308,50 @@ class TableConverter
                 if ($cell->getMinHeight() > $height) {
                     $height = $cell->getMinHeight();
                 }
-                if ($height > $rowHeight) {
-                    $rowHeight = $height;
+
+                if ($cell->getRowspan() > 1) {
+                    // save rowspan info for this column
+                    $rowspanTotalHeight = $height;
+                    $height = $height / $cell->getRowspan();
+                    for ($rs = 0; $rs < $cell->getRowspan(); $rs++) {
+                        $rowspanInfos[$c][$r + $rs] = array(
+                            'height_rowspan_total' => $rowspanTotalHeight,
+                            'own_height'           => $rowspanTotalHeight,
+                            'rowspan'              => $cell->getRowspan(),
+                            'width'                => $cellWidths[$r][$c],
+                            'position'             => $rs,
+                        );
+                        if (!isset($rowHeights[$r + $rs]) || $rowHeights[$r + $rs] < $height) {
+                            $rowHeights[$r + $rs] = $height;
+                        }
+                    }
+                } else if ($height > $rowHeights[$r]) {
+                    $rowHeights[$r] = $height;
                 }
                 $c++;
             }
-            $rowHeights[$r] = $rowHeight;
             $r++;
         }
         $this->_restoreFontSettings();
-        
+
+        // correct rowspan heights
+        foreach ($rowspanInfos as $c => $rowIndexes) {
+            foreach ($rowIndexes as $r => $rowspanInfo) {
+                if (0 === $rowspanInfo['position']) {
+                    $height = array_sum(array_slice($rowHeights, $r, $rowspanInfo['rowspan']));
+                }
+                $rowspanInfos[$c][$r]['height_rowspan_total'] = $height;
+            }
+        }
+
+        $this->rowspanInfos = $rowspanInfos;
         return $this->rowHeights = $rowHeights;
+    }
+
+    private function _getRowspanInfos()
+    {
+        $this->_getRowHeights();
+        return $this->rowspanInfos;
     }
 
     private function _saveFontSettings()
@@ -344,6 +413,7 @@ class TableConverter
         $pdf = $this->getPdf();
         $cellWidths = $this->_getCellWidths();
         $rowHeights = $this->_getRowHeights();
+        $rowspanInfos = $this->_getRowspanInfos();
 
         // after all sizes are collected, we can start printing the cells
         $x = $pdf->GetX();
@@ -356,8 +426,20 @@ class TableConverter
                 // calculate the width (regard colspan)
                 $width = $cellWidths[$r][$c];
 
+                // get the height with regarded rowspan
+                $height = $rowHeights[$r];
+                if (isset($rowspanInfos[$c][$r])) {
+                    if (0 === $rowspanInfos[$c][$r]['position'] && $rowspanInfos[$c][$r]['height_rowspan_total'] > $height) {
+                        $height = $rowspanInfos[$c][$r]['height_rowspan_total'];
+                    } else if (0 < $rowspanInfos[$c][$r]['position']) {
+                        // increase the X position, so that we do not overwrite the
+                        // cell with rowspan
+                        $x2 += $rowspanInfos[$c][$r]['width'];
+                    }
+                }
+
                 // background image
-                $this->_addCellBackgroundImage($cell, $x2, $y2, $width, $rowHeights[$r]);
+                $this->_addCellBackgroundImage($cell, $x2, $y2, $width, $height);
 
                 $pdf->SetFont(
                     $cell->getFontFamily(),
@@ -379,7 +461,7 @@ class TableConverter
                 // write cell to pdf
                 $pdf->MultiCell(
                     $width,
-                    $rowHeights[$r],
+                    $height,
                     $cell->getText(),
                     $cell->getBorder(),
                     $cell->getAlign(),
