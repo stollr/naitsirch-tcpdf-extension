@@ -127,8 +127,10 @@ class TableConverter
 
     private function _getRawCellWidths()
     {
-        $cellWidths = array();
+        $cellWidthsByUser = array();
+        $cellWidthsByStringLength = array();
         $rowspanInfos = array();
+        $cellMaxIndex = 0;
         $r = 0;
         foreach ($this->getTable()->getRows() as $row) {
             $c = 0;
@@ -147,16 +149,31 @@ class TableConverter
 
                 // ignore cells taking more than one column
                 if ($cell->getColspan() == 1) {
-                    $width = $cell->getWidth() ?: $this->getPdf()->GetStringWidth($cell->getText());
-                    if (empty($cellWidths[$c]) || $width > $cellWidths[$c]) {
-                        $cellWidths[$c] = $width;
+                    if ($cell->getWidth() && empty($cellWidthsByUser[$c])) {
+                        // only the first width is taken into account
+                        $cellWidthsByUser[$c] = $cell->getWidth();
+                    } else if (empty($cellWidthsByUser[$c])) {
+                        $cellWidthsByStringLength[$c][] = $this->getPdf()->GetStringWidth($cell->getText());
                     }
+                    $cellMaxIndex = $c > $cellMaxIndex ? $c : $cellMaxIndex;
                 }
 
                 $c += $cell->getColspan();
             }
             $r++;
         }
+
+        $cellWidths = array();
+        for ($c = 0; $c <= $cellMaxIndex; $c++) {
+            if (isset($cellWidthsByUser[$c])) {
+                $cellWidths[$c] = $cellWidthsByUser[$c];
+            } else if (isset($cellWidthsByStringLength[$c]) && count($cellWidthsByStringLength[$c]) > 0) {
+                $cellWidths[$c] = array_sum($cellWidthsByStringLength[$c]) / count($cellWidthsByStringLength[$c]);
+            } else {
+                $cellWidths[$c] = 0;
+            }
+        }
+
         return $cellWidths;
     }
     
