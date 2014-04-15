@@ -11,6 +11,10 @@ use Tcpdf\Extension\Attribute\BackgroundAttribute;
  */
 class Cell
 {
+    const VERTICAL_ALIGN_BOTTOM = 'bottom';
+    const VERTICAL_ALIGN_MIDDLE = 'middle';
+    const VERTICAL_ALIGN_TOP = 'top';
+
     private $row;
     private $text;
     private $colspan = 1;
@@ -21,6 +25,7 @@ class Cell
     private $background;
     private $border = 0;
     private $align = 'L';
+    private $verticalAlign = self::VERTICAL_ALIGN_TOP;
     private $fitCell = false;
     private $fill = 0;
     private $fontFamily;
@@ -277,6 +282,34 @@ class Cell
     public function setAlign($align)
     {
         $this->align = $align;
+        return $this;
+    }
+
+    /**
+     * Returns the vertical alignment option 'top', 'bottom' or 'middle'.
+     * @return string
+     */
+    public function getVerticalAlign()
+    {
+        return $this->verticalAlign;
+    }
+
+    /**
+     * Sets the vertical alignment in this cell
+     * Possible values are: 'top', 'bottom' and 'middle'.
+     * It is alowwed to use 'center' as an alias for 'middle'.
+     *
+     * Class constants VERTICAL_ALIGNMENT_* can be used.
+     *
+     * @param string $verticalAlign
+     * @return \Tcpdf\Extension\Table\Cell
+     */
+    public function setVerticalAlign($verticalAlign)
+    {
+        if (!in_array($verticalAlign, array(self::VERTICAL_ALIGN_BOTTOM, self::VERTICAL_ALIGN_MIDDLE, self::VERTICAL_ALIGN_TOP))) {
+            throw new \InvalidArgumentException(sprintf('The vertical alignment option "%s" is not valid.', $verticalAlign));
+        }
+        $this->verticalAlign = $verticalAlign;
         return $this;
     }
 

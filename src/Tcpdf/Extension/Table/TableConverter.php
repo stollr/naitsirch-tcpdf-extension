@@ -490,8 +490,8 @@ class TableConverter
                     false,              // stretch
                     false,              // is html
                     true,               // autopadding
-                    0,                  // maxh
-                    'T',                // vertical alignment T, M or B
+                    $height,            // max height
+                    strtoupper(substr($cell->getVerticalAlign(), 0, 1)), // vertical alignment T, M or B
                     $cell->getFitCell()
                 );
 

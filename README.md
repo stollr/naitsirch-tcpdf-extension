@@ -92,6 +92,7 @@ $table
             ->setText('Override Text') // or like this
             ->setFontWeight('bold')    // set font weight 'bold' or 'normal'
             ->setAlign('L')            // text alignment ('L', 'C', 'R' or 'J')
+            ->setVerticalAlign('top')  // vertical alignment ('top', 'bottom' or 'middle')
             ->setBorder(1)             // border format (like in TCPDF::MultiCell)
             ->setRowspan(1)            // rowspan like in HTML
             ->setColspan(2)            // colspan like in HTML
