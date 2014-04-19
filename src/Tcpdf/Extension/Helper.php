@@ -35,4 +35,37 @@ class Helper
 		}
         return $inch * $dpi;
     }
+
+    /**
+     * Returns the remaining page space from the given Y coordinate.
+     *
+     * @param \TCPDF $pdf
+     * @param int $page
+     * @param float $y
+     * @return float Remaining Y space in user unit.
+     */
+    public static function getRemainingYPageSpace(\TCPDF $pdf, $page, $y)
+    {
+        // get total height of the page in user units
+        $totalHeight = $pdf->getPageHeight($page) / $pdf->getScaleFactor();
+        $margin = $pdf->getMargins();
+
+        return $totalHeight - $margin['bottom'] - $y;
+    }
+
+    /**
+     * Returns the usable page height, which is the page height without top and bottom margin.
+     *
+     * @param \TCPDF $pdf
+     * @param int $page
+     * @return float
+     */
+    public static function getPageContentHeight(\TCPDF $pdf, $page)
+    {
+        // get total height of the page in user units
+        $totalHeight = $pdf->getPageHeight($page) / $pdf->getScaleFactor();
+        $margin = $pdf->getMargins();
+
+        return $totalHeight - $margin['bottom'] - $margin['top'];
+    }
 }

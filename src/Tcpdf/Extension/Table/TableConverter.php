@@ -328,18 +328,18 @@ class TableConverter
 
                 if ($cell->getRowspan() > 1) {
                     // save rowspan info for this column
-                    $rowspanTotalHeight = $height;
-                    $height = $height / $cell->getRowspan();
+                    $minHeightPerRow = $height / $cell->getRowspan();
                     for ($rs = 0; $rs < $cell->getRowspan(); $rs++) {
-                        $rowspanInfos[$c][$r + $rs] = array(
-                            'height_rowspan_total' => $rowspanTotalHeight,
-                            'own_height'           => $rowspanTotalHeight,
-                            'rowspan'              => $cell->getRowspan(),
-                            'width'                => $cellWidths[$r][$c],
-                            'position'             => $rs,
+                        $rowspanInfos[$r + $rs][$c] = array(
+                            'cell'         => $cell,
+                            'height_total' => $height, // will be corrected later, if the heights of later rows are known
+                            'own_height'   => $height,
+                            'rowspan'      => $cell->getRowspan(),
+                            'width'        => $cellWidths[$r][$c],
+                            'position'     => $rs,
                         );
-                        if (!isset($rowHeights[$r + $rs]) || $rowHeights[$r + $rs] < $height) {
-                            $rowHeights[$r + $rs] = $height;
+                        if (!isset($rowHeights[$r + $rs]) || $rowHeights[$r + $rs] < $minHeightPerRow) {
+                            $rowHeights[$r + $rs] = $minHeightPerRow;
                         }
                     }
                 } else if ($height > $rowHeights[$r]) {
@@ -352,12 +352,12 @@ class TableConverter
         $this->_restoreFontSettings();
 
         // correct rowspan heights
-        foreach ($rowspanInfos as $c => $rowIndexes) {
-            foreach ($rowIndexes as $r => $rowspanInfo) {
+        foreach ($rowspanInfos as $r => $cellIndexes) {
+            foreach ($cellIndexes as $c => $rowspanInfo) {
                 if (0 === $rowspanInfo['position']) {
                     $height = array_sum(array_slice($rowHeights, $r, $rowspanInfo['rowspan']));
                 }
-                $rowspanInfos[$c][$r]['height_rowspan_total'] = $height;
+                $rowspanInfos[$r][$c]['height_total'] = $height;
             }
         }
 
@@ -405,6 +405,39 @@ class TableConverter
 
         return $this;
     }
+
+    /**
+     * Splits cells with rowspan, which are larger than the page.
+     *
+     * @param Row $row
+     * @param int $r
+     * @param float $remainingPagePlace
+     */
+    private function _splitRowspanCells($row, $r, $remainingPagePlace)
+    {
+        $rowspanInfos = $this->_getRowspanInfos();
+        $rowHeights = $this->_getRowHeights();
+
+        foreach ($row->getCells() as $c => $cell) {
+            if (isset($rowspanInfos[$r][$c]) && 0 === $rowspanInfos[$r][$c]['position']) {
+                $heightSum = 0;
+                for ($r2 = 0; $r2 < $cell->getRowspan(); $r2++) {
+                    if ($heightSum + $rowHeights[$r + $r2] > $remainingPagePlace) {
+                        $rowspanInfos[$r][$c]['height_total'] = $heightSum;
+                        $rowspanInfos[$r + $r2][$c]['height_total'] -= $heightSum;
+                        $rowspanInfos[$r + $r2][$c]['position'] = 0;
+                        $rowspanInfos[$r + $r2][$c]['cell'] = $newCell = clone $cell;
+
+                        break;
+                    }
+                    $heightSum += $rowHeights[$r + $r2];
+                }
+            }
+        }
+
+        $this->rowspanInfos = $rowspanInfos;
+        return $rowspanInfos;
+    }
     
     /**
      * @return Table
@@ -439,65 +472,58 @@ class TableConverter
             $c = 0;
             $y2 = $pdf->GetY();
             $x2 = $x;
+
+            // autopagebreak, if row is too high
+            $page = $pdf->getPage();
+            $remainingPlace = Helper::getRemainingYPageSpace($pdf, $page, $y2);
+            if ($rowHeights[$r] >= $remainingPlace) {
+                $pdf->AddPage();
+                $page++;
+                $y2 = $pdf->GetY();
+                $remainingPlace = Helper::getRemainingYPageSpace($pdf, $page, $y2);
+            }
+
+            // check for and split rowspan cells, which are too large for the page
+            // rowspan infos gets updated
+            $rowspanInfos = $this->_splitRowspanCells($row, $r, $remainingPlace);
+
             foreach ($row->getCells() as $cell) {
                 // calculate the width (regard colspan)
                 $width = $cellWidths[$r][$c];
 
+                // TODO: this solution does only work as long as there are not two rowspan cells next to each other
                 // get the height with regarded rowspan
                 $height = $rowHeights[$r];
-                if (isset($rowspanInfos[$c][$r])) {
-                    if (0 === $rowspanInfos[$c][$r]['position'] && $rowspanInfos[$c][$r]['height_rowspan_total'] > $height) {
-                        $height = $rowspanInfos[$c][$r]['height_rowspan_total'];
-                    } else if (0 < $rowspanInfos[$c][$r]['position']) {
+                if (isset($rowspanInfos[$r][$c])) {
+                    if (0 === $rowspanInfos[$r][$c]['position'] && $rowspanInfos[$r][$c]['height_total'] > $height) {
+                        $height = $rowspanInfos[$r][$c]['height_total'];
+
+                        // check if there is a splitted cell, and print it if so
+                        if ($cell !== $rowspanInfos[$r][$c]['cell']) {
+                            if ($rowspanInfos[$r][$c]['own_height'] > $height) {
+                                $rowspanInfos[$r][$c]['cell']->setText(''); // cell is cloned, so we can change its text
+                            }
+                            $this->_printCell(
+                                $rowspanInfos[$r][$c]['cell'],
+                                $page,
+                                $x2,
+                                $y2,
+                                $rowspanInfos[$r][$c]['width'],
+                                $height
+                            );
+                            $x2 += $rowspanInfos[$r][$c]['width'];
+                        }
+                    } else if (0 < $rowspanInfos[$r][$c]['position']) {
                         // increase the X position, so that we do not overwrite the
                         // cell with rowspan
-                        $x2 += $rowspanInfos[$c][$r]['width'];
+                        $x2 += $rowspanInfos[$r][$c]['width'];
                     }
                 }
 
-                // background image
-                $this->_addCellBackgroundImage($cell, $x2, $y2, $width, $height);
-
-                $pdf->SetFont(
-                    $cell->getFontFamily(),
-                    $cell->getFontWeight() == Table::FONT_WEIGHT_BOLD ? 'B' : '',
-                    $cell->getFontSize()
-                );
-                $padding = $cell->getPadding();
-                $pdf->setCellPaddings($padding['L'], $padding['T'], $padding['R'], $padding['B']);
-
-                // set the line height here by myself
-                // because TCPDF resets line height (cell padding of lines) 
-                // before checking for current line height, so that it calculates the wrong
-                // line height in MultiCell
-                $pdf->setLastH($pdf->getCellHeight(
-                    $cell->getLineHeight() * ($cell->getFontSize() / $pdf->getScaleFactor()),
-                    false
-                ));
-
-                // write cell to pdf
-                $pdf->MultiCell(
-                    $width,
-                    $height,
-                    $cell->getText(),
-                    $cell->getBorder(),
-                    $cell->getAlign(),
-                    $cell->getFill(),
-                    1,                  // current position should go to the beginning of the next line
-                    $x2,
-                    $y2,
-                    false,              // line height should NOT be resetted
-                    false,              // stretch
-                    false,              // is html
-                    true,               // autopadding
-                    $height,            // max height
-                    strtoupper(substr($cell->getVerticalAlign(), 0, 1)), // vertical alignment T, M or B
-                    $cell->getFitCell()
-                );
+                $this->_printCell($cell, $page, $x2, $y2, $width, $height);
 
                 // increase X position for next cell
                 $x2 = $x2 + $width;
-
                 $c++;
             }
             $pdf->SetX($x);
@@ -505,5 +531,58 @@ class TableConverter
         }
 
         $this->_restoreFontSettings();
+    }
+
+    private function _printCell(Cell $cell, $page, $x, $y, $width, $height)
+    {
+        $pdf = $this->getPdf();
+        
+        // background image
+        $this->_addCellBackgroundImage($cell, $x, $y, $width, $height);
+
+        // If a cell is higher than the remaining space of the page, a page break
+        // could happen, but the Y value stays the same, so that the next cell is printed
+        // to the bottom of the next page. This is why we have to check
+        // and correct the page number, if needed
+        if ($pdf->getPage() != $page) {
+            $pdf->setPage($page);
+        }
+
+        $pdf->SetFont(
+            $cell->getFontFamily(),
+            $cell->getFontWeight() == Table::FONT_WEIGHT_BOLD ? 'B' : '',
+            $cell->getFontSize()
+        );
+        $padding = $cell->getPadding();
+        $pdf->setCellPaddings($padding['L'], $padding['T'], $padding['R'], $padding['B']);
+
+        // set the line height here by myself
+        // because TCPDF resets line height (cell padding of lines)
+        // before checking for current line height, so that it calculates the wrong
+        // line height in MultiCell
+        $pdf->setLastH($pdf->getCellHeight(
+            $cell->getLineHeight() * ($cell->getFontSize() / $pdf->getScaleFactor()),
+            false
+        ));
+
+        // write cell to pdf
+        $pdf->MultiCell(
+            $width,
+            $height,
+            $cell->getText(),
+            $cell->getBorder(),
+            $cell->getAlign(),
+            $cell->getFill(),
+            1,                  // current position should go to the beginning of the next line
+            $x,
+            $y,
+            false,              // line height should NOT be resetted
+            false,              // stretch
+            false,              // is html
+            true,               // autopadding
+            $height,            // max height
+            strtoupper(substr($cell->getVerticalAlign(), 0, 1)), // vertical alignment T, M or B
+            $cell->getFitCell()
+        );
     }
 }
