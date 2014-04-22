@@ -605,7 +605,7 @@ if (false !== strpos($cell->getText(), 'Kassierer')) { //  Alle diakonischen
             false,              // stretch
             false,              // is html
             true,               // autopadding
-            $height,            // max height
+            0,                  // max height, must be `0`, otherwise TCPDF fails printing the cell, because of strange bug in getting different heights. maybe rounding problem.
             strtoupper(substr($cell->getVerticalAlign(), 0, 1)), // vertical alignment T, M or B
             $cell->getFitCell()
         );
