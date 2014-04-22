@@ -508,9 +508,6 @@ class TableConverter
 
             $c = 0;
             foreach ($row->getCells() as $cell) {
-if (false !== strpos($cell->getText(), 'Kassierer')) { //  Alle diakonischen
-    $foo = 0;
-}
                 // calculate the width (regard colspan)
                 $width = $cellWidths[$r][$c];
 
