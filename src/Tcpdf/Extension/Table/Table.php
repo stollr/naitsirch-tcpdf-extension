@@ -13,6 +13,7 @@ class Table
     const FONT_WEIGHT_BOLD = 'bold';
 
     private $pdf;
+    private $pageBreakCallback;
     private $cacheDir;
     private $rows;
     private $borderWidth;
@@ -104,6 +105,12 @@ class Table
         return $this->rows;
     }
 
+    public function setRows(array $rows)
+    {
+        $this->rows = $rows;
+        return $this;
+    }
+
     public function getWidth()
     {
         if (null === $this->width) {
@@ -170,6 +177,27 @@ class Table
         return $this;
     }
 
+    /**
+     * Set the callback function, which will be executed on page break.
+     * 
+     * @param callable $callback
+     * @return \Tcpdf\Extension\Table\Table
+     */
+    public function setPageBreakCallback($callback)
+    {
+        $this->pageBreakCallback = $callback;
+        return $this;
+    }
+
+    /**
+     * Returns the callback which should be called if the table makes a page break.
+     * 
+     * @return callable
+     */
+    public function getPageBreakCallback()
+    {
+        return $this->pageBreakCallback;
+    }
 
     /**
      * Draws the table and returns the PDF generator.
@@ -177,7 +205,9 @@ class Table
      */
     public function end()
     {
-        new TableConverter($this, $this->cacheDir);
+        $converter = new TableConverter($this, $this->cacheDir);
+        $converter->convert();
+
         return $this->getPdf();
     }
 }

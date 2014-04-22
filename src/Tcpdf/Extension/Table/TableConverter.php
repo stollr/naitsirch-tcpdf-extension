@@ -18,6 +18,7 @@ class TableConverter
     private $rowHeights;
     private $cellWidths;
     private $rowspanInfos;
+    private $compiled;
 
     /**
      * Converts a table and puts it on the PDF.
@@ -29,7 +30,6 @@ class TableConverter
     {
         $this->table = $table;
         $this->cacheDir = $cacheDir;
-        $this->convert();
     }
 
     private function _addCellBackgroundImage(Cell $cell, $x = 0, $y = 0, $width = 0, $height = 0)
@@ -455,8 +455,25 @@ class TableConverter
         return $this->getTable()->getPdf();
     }
 
-    private function convert()
+    public function compile()
     {
+        if (!$this->compiled) {
+            $this->_saveFontSettings();
+
+            // this calculates all widths and heights
+            $this->_getRowHeights();
+
+            $this->_restoreFontSettings();
+
+            $this->compiled = true;
+        }
+        return $this;
+    }
+
+    public function convert()
+    {
+        $this->compile();
+
         // save current styles
         $this->_saveFontSettings();
 
@@ -467,9 +484,9 @@ class TableConverter
 
         // after all sizes are collected, we can start printing the cells
         $x = $pdf->GetX();
-        $r = 0;
-        foreach ($this->getTable()->getRows() as $row) {
-            $c = 0;
+        $rows = $this->getTable()->getRows();
+        for ($r = 0; $r < count($rows); $r++) {
+            $row = $rows[$r];
             $y2 = $pdf->GetY();
             $x2 = $x;
 
@@ -478,16 +495,22 @@ class TableConverter
             $remainingPlace = Helper::getRemainingYPageSpace($pdf, $page, $y2);
             if ($rowHeights[$r] >= $remainingPlace) {
                 $pdf->AddPage();
-                $page++;
-                $y2 = $pdf->GetY();
-                $remainingPlace = Helper::getRemainingYPageSpace($pdf, $page, $y2);
+
+                // execute page break callback
+                $this->_execPageBreakCallback($r, $cellWidths, $rowHeights, $rowspanInfos, $rows);
+                $r--;
+                continue;
             }
 
             // check for and split rowspan cells, which are too large for the page
             // rowspan infos gets updated
             $rowspanInfos = $this->_splitRowspanCells($row, $r, $remainingPlace);
 
+            $c = 0;
             foreach ($row->getCells() as $cell) {
+if (false !== strpos($cell->getText(), 'Kassierer')) { //  Alle diakonischen
+    $foo = 0;
+}
                 // calculate the width (regard colspan)
                 $width = $cellWidths[$r][$c];
 
@@ -496,10 +519,13 @@ class TableConverter
                 $height = $rowHeights[$r];
                 if (isset($rowspanInfos[$r][$c])) {
                     if (0 === $rowspanInfos[$r][$c]['position'] && $rowspanInfos[$r][$c]['height_total'] > $height) {
-                        $height = $rowspanInfos[$r][$c]['height_total'];
-
-                        // check if there is a splitted cell, and print it if so
-                        if ($cell !== $rowspanInfos[$r][$c]['cell']) {
+                        if ($cell === $rowspanInfos[$r][$c]['cell']) {
+                            // this is a regular cell with rowspan > 1
+                            // so we overwrite the height
+                            $height = $rowspanInfos[$r][$c]['height_total'];
+                            
+                        } else {
+                            // this is a splitted cell, which should be printed, here
                             if ($rowspanInfos[$r][$c]['own_height'] > $height) {
                                 $rowspanInfos[$r][$c]['cell']->setText(''); // cell is cloned, so we can change its text
                             }
@@ -509,7 +535,7 @@ class TableConverter
                                 $x2,
                                 $y2,
                                 $rowspanInfos[$r][$c]['width'],
-                                $height
+                                $rowspanInfos[$r][$c]['height_total']
                             );
                             $x2 += $rowspanInfos[$r][$c]['width'];
                         }
@@ -527,7 +553,6 @@ class TableConverter
                 $c++;
             }
             $pdf->SetX($x);
-            $r++;
         }
 
         $this->_restoreFontSettings();
@@ -584,5 +609,46 @@ class TableConverter
             strtoupper(substr($cell->getVerticalAlign(), 0, 1)), // vertical alignment T, M or B
             $cell->getFitCell()
         );
+    }
+
+    private function _execPageBreakCallback($rowIndex, &$cellWidths, &$rowHeights, &$rowspanInfos, &$rows)
+    {
+        $table = $this->getTable();
+        if (!$callback = $table->getPageBreakCallback()) {
+            return;
+        }
+
+        $table->setRows(array());
+        $callback($table);
+        $numberOfNewRows = count($table->getRows());
+
+        if ($numberOfNewRows > 0) {
+            $converter = new self($table, $this->cacheDir);
+            $converter->compile();
+
+            // merge cell width
+            array_splice($cellWidths, $rowIndex, 0, $converter->_getCellWidths());
+            $this->cellWidths = $cellWidths;
+
+            // merge row heights
+            array_splice($rowHeights, $rowIndex, 0, $converter->_getRowHeights());
+            $this->rowHeights = $rowHeights;
+
+            // merge rowspan info
+            $newRowspanInfos = $converter->_getRowspanInfos();
+            $reverseKeys = array_keys($rowspanInfos);
+            rsort($reverseKeys, SORT_NUMERIC);
+            //array_splice($rowspanInfos, $rowIndex, 0, $converter->_getRowspanInfos());
+            foreach ($reverseKeys as $r) {
+                if ($r >= $rowIndex && isset($rowspanInfos[$r])) {
+                    $rowspanInfos[$r + $numberOfNewRows] = $rowspanInfos[$r];
+                    unset($rowspanInfos[$r]);
+                }
+            }
+            $this->rowspanInfos = $rowspanInfos;
+
+            array_splice($rows, $rowIndex, 0, $table->getRows());
+        }
+        $table->setRows($rows);
     }
 }
