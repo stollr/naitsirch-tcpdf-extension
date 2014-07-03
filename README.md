@@ -103,4 +103,17 @@ $table
         ->end()
 ```
 
-####
+#### Background
+
+It is possible to define a background image for each table cell.
+
+```php
+$table
+    ->newRow()
+        ->newCell('Last Name')
+            ->setBackgroundDpi(300)                         // define the resolution for the printing
+            ->setBackgroundImage('/path/to/my/image.png')   // pass the path to your image
+            ->setBackgroundImage($binaryImageString)        // or pass the binary file content of your image
+        ->end()
+    ->end()
+```
