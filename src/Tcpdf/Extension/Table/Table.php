@@ -23,6 +23,7 @@ class Table
     private $fontWeight;
     private $width;
     private $widthPercentage;
+    private $xPosition;
 
     /**
      * Create a table structure for TCPDF.
@@ -34,6 +35,7 @@ class Table
     {
         $this->pdf = $pdf;
         $this->cacheDir = $cacheDir;
+        $this->xPosition = $pdf->GetX();
         $this->setBorderWidth($pdf->GetLineWidth());
         $this->setFontFamily($pdf->getFontFamily());
         $this->setFontSize($pdf->getFontSizePt()); // FontSizePT is in points (not in user unit)
@@ -117,7 +119,8 @@ class Table
             return null;
         }
         if ($this->widthPercentage) {
-            $maxWidth = $this->getPdf()->w - $this->getPdf()->rMargin - $this->getPdf()->x;
+            $margins = $this->getPdf()->getMargins();
+            $maxWidth = $this->getPdf()->getPageWidth() - $margins['right'] - $this->xPosition;
             return $this->width / 100 * $maxWidth;
         }
         return $this->width;
