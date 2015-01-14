@@ -18,6 +18,7 @@ class TableConverter
     private $rowHeights;
     private $cellWidths;
     private $rowspanInfos;
+    private $pageBreakCallbackHeight;
     private $compiled;
 
     /**
@@ -419,19 +420,29 @@ class TableConverter
         $rowHeights = $this->_getRowHeights();
 
         foreach ($row->getCells() as $c => $cell) {
-            if (isset($rowspanInfos[$r][$c]) && 0 === $rowspanInfos[$r][$c]['position']) {
+            if (isset($rowspanInfos[$r][$c])
+                && 0 === $rowspanInfos[$r][$c]['position']
+                && !isset($rowspanInfos[$r][$c]['splitted'])
+            ) {
+                $lastR = $r;
                 $heightSum = 0;
                 for ($r2 = 0; $r2 < $cell->getRowspan(); $r2++) {
                     if ($heightSum + $rowHeights[$r + $r2] > $remainingPagePlace) {
-                        $rowspanInfos[$r][$c]['height_total'] = $heightSum;
-                        $rowspanInfos[$r + $r2][$c]['height_total'] -= $heightSum;
+                        $rowspanInfos[$lastR][$c]['height_total'] = $heightSum;
+                        $rowspanInfos[$lastR][$c]['splitted'] = true;
                         $rowspanInfos[$r + $r2][$c]['position'] = 0;
-                        $rowspanInfos[$r + $r2][$c]['cell'] = $newCell = clone $cell;
+                        $rowspanInfos[$r + $r2][$c]['cell'] = clone $cell;
 
-                        break;
+                        $lastR = $r + $r2;
+                        $heightSum = 0;
+                        $pdf = $row->getTable()->getPdf();
+                        $remainingPagePlace = Helper::getPageContentHeight($pdf, $pdf->getPage()) - $this->_getPageBreakCallbackHeight();
                     }
                     $heightSum += $rowHeights[$r + $r2];
                 }
+
+                $rowspanInfos[$lastR][$c]['height_total'] = $heightSum;
+                $rowspanInfos[$lastR][$c]['splitted'] = true;
             }
         }
 
@@ -515,7 +526,7 @@ class TableConverter
                 // get the height with regarded rowspan
                 $height = $rowHeights[$r];
                 if (isset($rowspanInfos[$r][$c])) {
-                    if (0 === $rowspanInfos[$r][$c]['position'] && $rowspanInfos[$r][$c]['height_total'] > $height) {
+                    if (0 === $rowspanInfos[$r][$c]['position']) {
                         if ($cell === $rowspanInfos[$r][$c]['cell']) {
                             // this is a regular cell with rowspan > 1
                             // so we overwrite the height
@@ -647,5 +658,37 @@ class TableConverter
             array_splice($rows, $rowIndex, 0, $table->getRows());
         }
         $table->setRows($rows);
+    }
+
+    /**
+     * Calculates and returns the height of rows, added by the page break callback.
+     * @return int
+     */
+    private function _getPageBreakCallbackHeight()
+    {
+        if ($this->pageBreakCallbackHeight !== null) {
+            return $this->pageBreakCallbackHeight;
+        }
+
+        $table = $this->getTable();
+        if (!$callback = $table->getPageBreakCallback()) {
+            return $this->pageBreakCallbackHeight = 0;
+        }
+
+        $table->setRows(array());
+        $callback($table);
+        $numberOfNewRows = count($table->getRows());
+
+        $this->pageBreakCallbackHeight = 0;
+        if ($numberOfNewRows > 0) {
+            $converter = new self($table, $this->cacheDir);
+            $converter->compile();
+
+            // merge row heights
+            foreach ($converter->_getRowHeights() as $height) {
+                $this->pageBreakCallbackHeight += $height;
+            }
+        }
+        return $this->pageBreakCallbackHeight;
     }
 }
