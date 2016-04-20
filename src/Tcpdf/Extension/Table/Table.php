@@ -15,7 +15,7 @@ class Table
     private $pdf;
     private $pageBreakCallback;
     private $cacheDir;
-    private $rows;
+    private $rows = array();
     private $borderWidth;
     private $lineHeight = 1;
     private $fontFamily;
