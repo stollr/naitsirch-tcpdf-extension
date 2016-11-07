@@ -287,6 +287,8 @@ class TableConverter
         
         $pdf = $this->getPdf();
         $this->_saveFontSettings();
+
+        $pageContentHeight = Helper::getPageContentHeight($pdf, $pdf->getPage());
         
         $cellWidths = $this->_getCellWidths();
         $rowHeights = array();
@@ -325,6 +327,20 @@ class TableConverter
 
                 if ($cell->getMinHeight() > $height) {
                     $height = $cell->getMinHeight();
+                }
+
+                if ($height > $pageContentHeight) {
+                    $msg = "The height of the cell's content exceeds the page height. "
+                         . "Wrapping of such a cell is currently not supported by "
+                         . "tcpdf-extension. Please try to split your text into "
+                         . "multiple rows manually. The content of the specific "
+                         . "cell is: \"%s\"."
+                    ;
+                    $content = mb_strlen($cell->getText()) < 250
+                        ? $cell->getText()
+                        : mb_substr($cell->getText(), 0, 250) . ' [...]'
+                    ;
+                    throw new \Exception(sprintf($msg, $content));
                 }
 
                 if ($cell->getRowspan() > 1) {
