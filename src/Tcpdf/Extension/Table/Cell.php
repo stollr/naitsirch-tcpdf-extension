@@ -313,11 +313,6 @@ class Cell
         return $this;
     }
 
-    public function getFill()
-    {
-        return $this->fill;
-    }
-
     /**
      * Returns whether the text of the cell should be made fitting to the cell width.
      * @return boolean
@@ -335,19 +330,6 @@ class Cell
     public function setFitCell($fitCell)
     {
         $this->fitCell = (boolean) $fitCell;
-        return $this;
-    }
-
-    /**
-     * <div>
-     *   <p>Indicates if the cell background must be painted (<i>true</i>) or transparent (<i>false</i>). Default value: <i>false</i>.</p>
-     * </div>
-     * @param boolean $fill
-     * @return Cell
-     */
-    public function setFill($fill)
-    {
-        $this->fill = $fill;
         return $this;
     }
 

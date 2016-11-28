@@ -99,11 +99,24 @@ $table
             ->setFontSize(10)          // unit for font size is same as defined in TCPDF
             ->setMinHeight(10)         // defining min-height of the cell like in CSS
             ->setPadding(2, 4)         // setting cell padding (inner margin) like in CSS
+            ->setPadding(2, 4, 5, 6)   // or like this
             ->setWidth(125)            // unit for width is same as defined in TCPDF
         ->end()
 ```
 
 #### Background
+
+Define a background color:
+
+```php
+$table
+    ->newRow()
+        ->newCell('Last Name')
+            ->setBackgroundColor('#ff4400')                 // hexadecimal RGB color code
+            ->setBackgroundColor(array(250, 80, 10)         // decimal RGB color array
+        ->end()
+    ->end()
+```
 
 It is possible to define a background image for each table cell.
 

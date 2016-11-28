@@ -605,6 +605,12 @@ class TableConverter
         $padding = $cell->getPadding();
         $pdf->setCellPaddings($padding['L'], $padding['T'], $padding['R'], $padding['B']);
 
+        // Set the background color
+        $backgroundColor = Helper::convertColor($cell->getBackgroundColor());
+        if ($backgroundColor) {
+            $pdf->SetFillColorArray($backgroundColor);
+        }
+
         // set the line height here by myself
         // because TCPDF resets line height (cell padding of lines)
         // before checking for current line height, so that it calculates the wrong
@@ -621,7 +627,7 @@ class TableConverter
             $cell->getText(),
             $cell->getBorder(),
             $cell->getAlign(),
-            $cell->getFill(),
+            $backgroundColor !== null,
             1,                  // current position should go to the beginning of the next line
             $x,
             $y,

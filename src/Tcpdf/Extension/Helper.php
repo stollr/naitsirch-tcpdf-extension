@@ -9,6 +9,37 @@ namespace Tcpdf\Extension;
  */
 class Helper
 {
+
+    /**
+     * Converts a hex RGB color string to a decimal RGB color array. If the given
+     * value is empty or the string 'transparent' it will return NULL.
+     *
+     * @example convertColor('#ff00ff') => array(255, 0, 255)
+     * @example convertColor('#aaa') => array(170, 170, 170)
+     * @example convertColor(array(120, 50, 20)) => array(120, 50, 20)
+     * @example convertColor('transparent') => null
+     *
+     * @param string|array $color
+     * 
+     * @return array|null
+     */
+    public static function convertColor($color)
+    {
+        if (empty($color) || 'transparent' === $color) {
+            return null;
+        }
+
+        if (is_string($color)) {
+            $color = ltrim($color, '#');
+            while (strlen($color) < 6) {
+                $color .= substr($color, -1);
+            }
+            return array_map('hexdec', str_split($color, 2));
+        }
+
+        return $color;
+    }
+
     public static function getSizeInPixel($widthInUserUnit, $unit, $dpi)
     {
         $unit = strtolower($unit);
