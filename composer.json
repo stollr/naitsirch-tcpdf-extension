@@ -9,7 +9,7 @@
         { "name": "naitsirch", "email": "login.naitsirch@arcor.de" }
     ],
     "require": {
-        "php": ">=5.3.8",
+        "php": ">=5.3.3",
         "tecnickcom/tcpdf": "6.2.*"
     },
     "autoload": {
