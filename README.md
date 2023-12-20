@@ -6,6 +6,11 @@ feature rich, but not easy to use.
 This library builds on top of the TCPDF library. At the current state it provides
 only a smart API to **create tables in a comfortable way**.
 
+## ABANDONED
+
+This repository is abandoned and should not be used anymore. Please change from
+`naitsirch/tcpdf-extension` to the compatible [`stollr/tcpdf-extension`](https://github.com/stollr/tcpdf-extension).
+
 ## Features
 
 * More comfortable creation of tables
